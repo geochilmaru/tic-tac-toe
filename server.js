@@ -2,8 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const TicTacToeGame = require('./game');
-const { addToQueue, handleDisconnect, activeGames, socketRooms } = require('./matchmaking');
+const { addToQueue, handleDisconnect, activeGames, playerRooms } = require('./matchmaking');
 
 const app = express();
 const server = http.createServer(app);
@@ -14,9 +13,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 io.on('connection', (socket) => {
   console.log(`Player connected: ${socket.id}`);
 
-  addToQueue(socket, io);
+  socket.on('find-game', () => {
+    addToQueue(socket, io);
+  });
 
-  socket.on('move', ({ roomId, index }) => {
+  socket.on('make-move', ({ index }) => {
+    const roomId = playerRooms.get(socket.id);
+    if (!roomId) return;
+
     const room = activeGames.get(roomId);
     if (!room) return;
 
@@ -26,22 +30,20 @@ io.on('connection', (socket) => {
     const result = room.game.makeMove(index);
     if (!result.valid) return;
 
-    io.to(roomId).emit('gameState', {
+    io.to(roomId).emit('move-made', {
+      index,
+      symbol: result.symbol,
       board: result.board,
       currentTurn: room.game.currentTurn,
-      gameOver: result.winner !== null || result.isDraw,
-      winner: result.winner || (result.isDraw ? 'draw' : null),
     });
-  });
 
-  socket.on('restart', ({ roomId }) => {
-    const room = activeGames.get(roomId);
-    if (!room) return;
-
-    room.game = new TicTacToeGame();
-
-    const { board, currentTurn } = room.game.getState();
-    io.to(roomId).emit('gameState', { board, currentTurn, gameOver: false, winner: null });
+    if (result.winner || result.isDraw) {
+      io.to(roomId).emit('game-over', {
+        winner: result.winner,
+        isDraw: result.isDraw,
+        board: result.board,
+      });
+    }
   });
 
   socket.on('disconnect', () => {

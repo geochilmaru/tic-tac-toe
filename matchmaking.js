@@ -2,7 +2,7 @@ const TicTacToeGame = require('./game');
 
 const queue = [];
 const activeGames = new Map();
-const socketRooms = new Map();
+const playerRooms = new Map();
 
 function addToQueue(socket, io) {
   if (queue.length > 0) {
@@ -18,8 +18,8 @@ function addToQueue(socket, io) {
     ];
 
     activeGames.set(roomId, { game, players });
-    socketRooms.set(opponent.id, roomId);
-    socketRooms.set(socket.id, roomId);
+    playerRooms.set(opponent.id, roomId);
+    playerRooms.set(socket.id, roomId);
 
     opponent.join(roomId);
     socket.join(roomId);
@@ -41,7 +41,7 @@ function removeFromQueue(socket) {
 function handleDisconnect(socket, io) {
   removeFromQueue(socket);
 
-  const roomId = socketRooms.get(socket.id);
+  const roomId = playerRooms.get(socket.id);
   if (!roomId) return;
 
   const room = activeGames.get(roomId);
@@ -49,9 +49,9 @@ function handleDisconnect(socket, io) {
     const opponent = room.players.find((p) => p.socket.id !== socket.id);
     if (opponent) opponent.socket.emit('opponent-left');
 
-    room.players.forEach((p) => socketRooms.delete(p.socket.id));
+    room.players.forEach((p) => playerRooms.delete(p.socket.id));
     activeGames.delete(roomId);
   }
 }
 
-module.exports = { addToQueue, removeFromQueue, handleDisconnect, activeGames, socketRooms };
+module.exports = { addToQueue, removeFromQueue, handleDisconnect, activeGames, playerRooms };
