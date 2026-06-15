@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const TicTacToeGame = require('./game');
 
 const app = express();
 const server = http.createServer(app);
@@ -12,32 +13,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 const rooms = {};
 let waitingPlayer = null;
 
-function checkWinner(board) {
-  const lines = [
-    [0, 1, 2], [3, 4, 5], [6, 7, 8],
-    [0, 3, 6], [1, 4, 7], [2, 5, 8],
-    [0, 4, 8], [2, 4, 6],
-  ];
-  for (const [a, b, c] of lines) {
-    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-      return board[a];
-    }
-  }
-  return null;
-}
-
 io.on('connection', (socket) => {
   console.log(`Player connected: ${socket.id}`);
 
   if (waitingPlayer) {
     const roomId = `room_${Date.now()}`;
-    rooms[roomId] = {
-      id: roomId,
-      players: [waitingPlayer.id, socket.id],
-      board: Array(9).fill(null),
-      currentTurn: 'X',
-      gameOver: false,
-    };
+    const game = new TicTacToeGame();
+    rooms[roomId] = { id: roomId, players: [waitingPlayer.id, socket.id], game };
 
     waitingPlayer.join(roomId);
     socket.join(roomId);
@@ -45,12 +27,8 @@ io.on('connection', (socket) => {
     waitingPlayer.emit('gameStart', { symbol: 'X', roomId });
     socket.emit('gameStart', { symbol: 'O', roomId });
 
-    io.to(roomId).emit('gameState', {
-      board: rooms[roomId].board,
-      currentTurn: 'X',
-      gameOver: false,
-      winner: null,
-    });
+    const { board, currentTurn } = game.getState();
+    io.to(roomId).emit('gameState', { board, currentTurn, gameOver: false, winner: null });
 
     waitingPlayer = null;
   } else {
@@ -60,28 +38,21 @@ io.on('connection', (socket) => {
 
   socket.on('move', ({ roomId, index }) => {
     const room = rooms[roomId];
-    if (!room || room.gameOver) return;
+    if (!room) return;
 
     const playerIndex = room.players.indexOf(socket.id);
     const symbol = playerIndex === 0 ? 'X' : 'O';
 
-    if (symbol !== room.currentTurn) return;
-    if (room.board[index] !== null) return;
+    if (symbol !== room.game.currentTurn) return;
 
-    room.board[index] = symbol;
-
-    const winner = checkWinner(room.board);
-    const isDraw = !winner && room.board.every((cell) => cell !== null);
-
-    if (winner || isDraw) room.gameOver = true;
-
-    room.currentTurn = room.currentTurn === 'X' ? 'O' : 'X';
+    const result = room.game.makeMove(index);
+    if (!result.valid) return;
 
     io.to(roomId).emit('gameState', {
-      board: room.board,
-      currentTurn: room.currentTurn,
-      gameOver: room.gameOver,
-      winner: winner || (isDraw ? 'draw' : null),
+      board: result.board,
+      currentTurn: room.game.currentTurn,
+      gameOver: result.winner !== null || result.isDraw,
+      winner: result.winner || (result.isDraw ? 'draw' : null),
     });
   });
 
@@ -89,16 +60,10 @@ io.on('connection', (socket) => {
     const room = rooms[roomId];
     if (!room) return;
 
-    room.board = Array(9).fill(null);
-    room.currentTurn = 'X';
-    room.gameOver = false;
+    room.game = new TicTacToeGame();
 
-    io.to(roomId).emit('gameState', {
-      board: room.board,
-      currentTurn: room.currentTurn,
-      gameOver: false,
-      winner: null,
-    });
+    const { board, currentTurn } = room.game.getState();
+    io.to(roomId).emit('gameState', { board, currentTurn, gameOver: false, winner: null });
   });
 
   socket.on('disconnect', () => {
