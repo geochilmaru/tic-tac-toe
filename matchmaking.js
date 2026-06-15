@@ -5,6 +5,9 @@ const activeGames = new Map();
 const playerRooms = new Map();
 
 function addToQueue(socket, io) {
+  if (queue.some((s) => s.id === socket.id)) return;
+  if (playerRooms.has(socket.id)) return;
+
   if (queue.length > 0) {
     const opponent = queue.shift();
 
@@ -34,8 +37,16 @@ function addToQueue(socket, io) {
 }
 
 function removeFromQueue(socket) {
-  const index = queue.findIndex((s) => s.id === socket.id);
-  if (index !== -1) queue.splice(index, 1);
+  for (let i = queue.length - 1; i >= 0; i--) {
+    if (queue[i].id === socket.id) queue.splice(i, 1);
+  }
+}
+
+function cleanupGame(roomId) {
+  const room = activeGames.get(roomId);
+  if (!room) return;
+  room.players.forEach((p) => playerRooms.delete(p.socket.id));
+  activeGames.delete(roomId);
 }
 
 function handleDisconnect(socket, io) {
@@ -48,10 +59,11 @@ function handleDisconnect(socket, io) {
   if (room) {
     const opponent = room.players.find((p) => p.socket.id !== socket.id);
     if (opponent) opponent.socket.emit('opponent-left');
-
     room.players.forEach((p) => playerRooms.delete(p.socket.id));
     activeGames.delete(roomId);
+  } else {
+    playerRooms.delete(socket.id);
   }
 }
 
-module.exports = { addToQueue, removeFromQueue, handleDisconnect, activeGames, playerRooms };
+module.exports = { addToQueue, removeFromQueue, handleDisconnect, cleanupGame, activeGames, playerRooms };

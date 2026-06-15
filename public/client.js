@@ -15,16 +15,30 @@ const WIN_LINES = [
   [0, 4, 8], [2, 4, 6],
 ];
 
+function setStatus(text, cls = '') {
+  statusEl.textContent = text;
+  statusEl.className = cls;
+}
+
+function setSearching(searching) {
+  findGameBtn.disabled = searching;
+  findGameBtn.classList.toggle('is-searching', searching);
+}
+
 function setBoardEnabled(enabled) {
   cells.forEach((cell) => {
     cell.disabled = !enabled;
   });
+  if (enabled && document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
 }
 
 function resetBoard() {
   mySymbol = null;
   roomId = null;
   myTurn = false;
+  statusEl.style.removeProperty('--player-color');
   cells.forEach((cell) => {
     cell.textContent = '';
     delete cell.dataset.symbol;
@@ -55,15 +69,16 @@ function highlightWinnerCells(board) {
 }
 
 findGameBtn.addEventListener('click', () => {
-  findGameBtn.disabled = true;
-  statusEl.textContent = 'Searching for opponent...';
+  setSearching(true);
+  setStatus('Searching for opponent...');
   socket.emit('find-game');
 });
 
 playAgainBtn.addEventListener('click', () => {
   playAgainBtn.hidden = true;
   resetBoard();
-  statusEl.textContent = 'Searching for opponent...';
+  setSearching(true);
+  setStatus('Searching for opponent...');
   socket.emit('find-game');
 });
 
@@ -71,28 +86,32 @@ cells.forEach((cell) => {
   cell.addEventListener('click', () => {
     if (!myTurn || cell.textContent !== '') return;
     socket.emit('make-move', { index: parseInt(cell.dataset.index), roomId });
+    cell.blur();
   });
 });
 
 socket.on('waiting', () => {
-  statusEl.textContent = 'Waiting for another player...';
+  setStatus('Waiting for another player...');
 });
 
 socket.on('game-start', (data) => {
   mySymbol = data.symbol;
   roomId = data.roomId;
   myTurn = mySymbol === 'X';
+  setSearching(false);
+  statusEl.style.setProperty('--player-color', mySymbol === 'X' ? '#4a9eff' : '#ff5a5a');
   setBoardEnabled(myTurn);
-  statusEl.textContent = myTurn
-    ? 'Your turn — you are X'
-    : `You are ${mySymbol} — waiting for X to move`;
+  setStatus(
+    myTurn ? 'Your turn — you are X' : `You are ${mySymbol} — waiting for X to move`,
+    myTurn ? 'turn-mine' : 'turn-opponent'
+  );
 });
 
 socket.on('move-made', ({ board, currentTurn }) => {
   renderBoard(board);
   myTurn = currentTurn === mySymbol;
   setBoardEnabled(myTurn);
-  statusEl.textContent = myTurn ? 'Your turn' : "Opponent's turn";
+  setStatus(myTurn ? 'Your turn' : "Opponent's turn", myTurn ? 'turn-mine' : 'turn-opponent');
 });
 
 socket.on('game-over', ({ winner, isDraw, board }) => {
@@ -101,12 +120,12 @@ socket.on('game-over', ({ winner, isDraw, board }) => {
   setBoardEnabled(false);
 
   if (isDraw) {
-    statusEl.textContent = "It's a draw!";
+    setStatus("It's a draw!");
   } else if (winner === mySymbol) {
-    statusEl.textContent = 'You win!';
+    setStatus('You win!');
     highlightWinnerCells(board);
   } else {
-    statusEl.textContent = 'You lose!';
+    setStatus('You lose!');
     highlightWinnerCells(board);
   }
 
@@ -114,7 +133,7 @@ socket.on('game-over', ({ winner, isDraw, board }) => {
 });
 
 socket.on('opponent-left', () => {
-  statusEl.textContent = 'Opponent disconnected.';
+  setStatus('Opponent disconnected.');
   myTurn = false;
   setBoardEnabled(false);
   playAgainBtn.hidden = false;

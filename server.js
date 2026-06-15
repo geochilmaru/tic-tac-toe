@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const { addToQueue, handleDisconnect, activeGames, playerRooms } = require('./matchmaking');
+const { addToQueue, handleDisconnect, cleanupGame, activeGames, playerRooms } = require('./matchmaking');
 
 const app = express();
 const server = http.createServer(app);
@@ -43,6 +43,7 @@ io.on('connection', (socket) => {
         isDraw: result.isDraw,
         board: result.board,
       });
+      cleanupGame(roomId);
     }
   });
 

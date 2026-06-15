@@ -6,7 +6,7 @@ class TicTacToeGame {
   }
 
   makeMove(cellIndex) {
-    if (cellIndex < 0 || cellIndex > 8) {
+    if (!Number.isInteger(cellIndex) || cellIndex < 0 || cellIndex > 8) {
       return { valid: false };
     }
     if (this.board[cellIndex] !== null) {
