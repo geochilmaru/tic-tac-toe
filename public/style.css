@@ -1,0 +1,85 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #1a1a2e;
+  font-family: 'Segoe UI', sans-serif;
+  color: #eee;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+h1 {
+  font-size: 2.5rem;
+  color: #e94560;
+}
+
+.status {
+  font-size: 1.2rem;
+  color: #a8dadc;
+  min-height: 1.5em;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 120px);
+  grid-template-rows: repeat(3, 120px);
+  gap: 8px;
+}
+
+.cell {
+  background: #16213e;
+  border: 2px solid #0f3460;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 3rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.cell:hover:not(.taken) {
+  background: #0f3460;
+}
+
+.cell.taken {
+  cursor: default;
+}
+
+.cell.x {
+  color: #e94560;
+}
+
+.cell.o {
+  color: #a8dadc;
+}
+
+.restart-btn {
+  padding: 12px 32px;
+  background: #e94560;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.restart-btn:hover {
+  background: #c73652;
+}
