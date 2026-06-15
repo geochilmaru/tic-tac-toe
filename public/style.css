@@ -26,50 +26,46 @@ h1 {
   color: #e94560;
 }
 
-.status {
+#status {
   font-size: 1.2rem;
   color: #a8dadc;
   min-height: 1.5em;
 }
 
-.board {
+#board {
   display: grid;
-  grid-template-columns: repeat(3, 120px);
-  grid-template-rows: repeat(3, 120px);
-  gap: 8px;
+  grid-template-columns: repeat(3, 160px);
+  grid-template-rows: repeat(3, 160px);
+  gap: 10px;
 }
 
 .cell {
+  width: 160px;
+  height: 160px;
   background: #16213e;
   border: 2px solid #0f3460;
   border-radius: 8px;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 3rem;
+  font-size: 4rem;
   font-weight: bold;
   cursor: pointer;
   transition: background 0.2s;
   user-select: none;
+  color: #eee;
 }
 
-.cell:hover:not(.taken) {
+.cell:hover:not(:disabled) {
   background: #0f3460;
 }
 
-.cell.taken {
+.cell:disabled {
   cursor: default;
 }
 
-.cell.x {
-  color: #e94560;
-}
-
-.cell.o {
-  color: #a8dadc;
-}
-
-.restart-btn {
+#find-game-btn,
+#play-again-btn {
   padding: 12px 32px;
   background: #e94560;
   color: white;
@@ -80,6 +76,12 @@ h1 {
   transition: background 0.2s;
 }
 
-.restart-btn:hover {
+#find-game-btn:hover,
+#play-again-btn:hover {
   background: #c73652;
+}
+
+#find-game-btn:disabled {
+  background: #555;
+  cursor: default;
 }
